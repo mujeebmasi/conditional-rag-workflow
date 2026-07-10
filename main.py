@@ -31,7 +31,7 @@ fee_retriever = build_retriever("data/fee_structure.pdf")
 
 llm = ChatGroq(model = "llama-3.3-70b-versatile", temperature=0.4)
 
-#STEP 2 -> BUILDING STATE
+#STEP 2 -> BUILDING STATEE
 
 class State(TypedDict):
     program : str
