@@ -38,6 +38,6 @@ class State(TypedDict):
     messages : Annotated[list, add_messages]
     query_type : str
     retrieved_context : str
-    
+    inner_state : str
 
 
