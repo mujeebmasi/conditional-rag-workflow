@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
-from typing import Literal, TypedDict, Annotated
+from typing import TypedDict, Annotated
 from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, START, END
 from langchain_groq import ChatGroq
@@ -11,6 +11,34 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 
 load_dotenv()
+
+
+def configure_groq_api_key() -> None:
+    """Load Groq API key from Streamlit secrets first, then environment."""
+    groq_key = None
+    try:
+        groq_key = st.secrets.get("GROQ_API_KEY")
+    except Exception:
+        # No secrets.toml configured locally; fall back to environment/.env.
+        groq_key = None
+
+    if not groq_key:
+        groq_key = os.getenv("GROQ_API_KEY")
+
+    if not groq_key:
+        raise RuntimeError(
+            "Missing GROQ_API_KEY. Add it in Streamlit Cloud app secrets "
+            "or set it in a local .env file."
+        )
+    os.environ["GROQ_API_KEY"] = groq_key
+
+
+try:
+    configure_groq_api_key()
+except Exception as key_error:
+    st.error(str(key_error))
+    st.stop()
+
 
 # ============================================================
 # ALL LOGIC BELOW (retrievers, state, nodes, graph) IS EXACTLY
@@ -49,11 +77,7 @@ class State(TypedDict):
 def build_app():
     academic_retriever = build_retriever("academics_handbook.pdf")
     fee_retriever = build_retriever("fee_structure.pdf")
-    llm = ChatGroq(
-    groq_api_key=st.secrets["GROQ_API_KEY"],
-    model="llama-3.3-70b-versatile",
-    temperature=0.4,
-    )
+    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.4)
 
     def classifier_node(state: State) -> dict:
         """Look at the latest human message and decide which retriever to use based on the query type."""
@@ -258,11 +282,18 @@ if user_query:
 
     with st.chat_message("assistant", avatar="🎓"):
         with st.spinner("Thinking..."):
-            result = app.invoke({
-                "programme": programme,
-                "messages": [("human", user_query)],
-            })
-            answer = result["messages"][-1].content
+            try:
+                result = app.invoke({
+                    "programme": programme,
+                    "messages": [("human", user_query)],
+                })
+                answer = result["messages"][-1].content
+            except Exception as chat_error:
+                answer = (
+                    "I could not get a response from Groq right now. "
+                    "Please check your API key, model access, and rate limits, then try again.\n\n"
+                    f"Technical details: {chat_error}"
+                )
         st.markdown(answer)
 
     st.session_state.messages.append({"role": "assistant", "content": answer})
