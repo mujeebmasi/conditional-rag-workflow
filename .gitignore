@@ -1,1 +1,7 @@
 .env
+# Ignore frontend
+frontend/
+
+# Ignore API server
+api_server.py
+.streamlit/secrets.toml

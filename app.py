@@ -49,7 +49,11 @@ class State(TypedDict):
 def build_app():
     academic_retriever = build_retriever("academics_handbook.pdf")
     fee_retriever = build_retriever("fee_structure.pdf")
-    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.4)
+    llm = ChatGroq(
+    groq_api_key=st.secrets["GROQ_API_KEY"],
+    model="llama-3.3-70b-versatile",
+    temperature=0.4,
+    )
 
     def classifier_node(state: State) -> dict:
         """Look at the latest human message and decide which retriever to use based on the query type."""
