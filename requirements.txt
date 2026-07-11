@@ -8,3 +8,5 @@ langchain-huggingface
 sentence-transformers
 faiss-cpu
 pypdf
+fastapi
+uvicorn
