@@ -177,4 +177,3 @@ GitHub: https://github.com/mujeebmasi
 ---
 
 
-This project is intended for educational and portfolio purposes.
