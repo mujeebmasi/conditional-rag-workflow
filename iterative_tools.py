@@ -84,7 +84,7 @@ def extract_draft_node(state:State) -> dict:
     draft = last_message.content 
     print(f"\n\n generated post \n {draft} \n ")
     return {"draft" : draft}
-        
+
 
 REVIEWER_SYSTEM_PROMPT = (
     "You are a strict LinkedIn content reviewer. You judge whether a "
@@ -132,3 +132,79 @@ def reviewer_node(state:State) -> dict:
         "review_feedback": feedback,
         "is_approved": is_approved,
     }
+
+#router function 
+
+def should_use_tool(state:State):
+    last_message = state['messages'][-1]
+
+    if getattr(last_message,'tool_calls',None):
+        return "tools"
+    return "extract_draft"
+
+def should_stop_looping(state:State):
+    if state['is_approved']:
+        print("post haas been approved \n")
+        return END
+    if state['attempt'] >= 3:
+        print("reached max attempts")
+        return END 
+    return "writer"
+
+#build the graph 
+graph = StateGraph(State)
+
+graph.add_node("writer",writer_node)
+graph.add_node("tools",tool_node)
+graph.add_node("extract_draft",extract_draft_node)
+graph.add_node("reviewer",reviewer_node)
+
+graph.add_edge(START,"writer")
+
+graph.add_conditional_edges(
+    "writer",should_use_tool,
+)
+
+graph.add_edge("tools","reviewer")
+graph.add_edge("extract_draft", "reviewer")
+
+graph.add_conditional_edges(
+    "reviewer",should_stop_looping
+)
+
+app = graph.compile()
+
+
+print("=" * 55)
+print("Welcome to the LinkedIn Post Generator")
+print("=" * 55)
+print("\nThis tool will draft a LinkedIn post for you, review it")
+print("itself, and iterate until it's publish-ready.")
+
+print("=" * 55)
+
+topic = input("\nWhat topic do you want a LinkedIn post about?\n> ").strip()
+
+if not topic:
+    print("\nNo topic given. Exiting.")
+else:
+    print("\nStarting generation...\n")
+
+    initial_state = {
+        "topic": topic,
+        "messages": [],
+        "draft": "",
+        "review_feedback": "",
+        "is_approved": False,
+        "attempt": 0,
+    }
+
+    final_state = app.invoke(initial_state)
+
+    print("\n" + "=" * 55)
+    print("FINAL LINKEDIN POST")
+    print("=" * 55)
+    print(final_state["draft"])
+    print("=" * 55)
+    print(f"Total attempts: {final_state['attempt']}")
+    print(f"Approved: {final_state['is_approved']}")
